@@ -1,0 +1,110 @@
+/* Pull in *all* of Tailwind v4 (base, components, utilities) */
+@import 'tailwindcss';
+
+/* Pull in Flowbite’s own styles */
+@import 'flowbite';
+
+/* Your custom component utilities */
+@layer components {
+
+  /* FormContainers */
+  .form-container {
+    @apply bg-black p-6 rounded shadow-md;
+  }
+
+  /* FormInputs */
+  .form-input {
+    @apply w-full p-3 border bg-gray-600 border-gray-300 rounded
+           focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4;
+  }
+  /* List Items */
+  .list-container {
+    @apply grid grid-rows-2 grid-flow-col auto-cols-max gap-4
+           overflow-x-auto snap-x snap-mandatory py-2;
+  }
+
+  .list-item {
+    /* keep your border/padding/styling, but prevent shrinking */
+    @apply border border-white p-4 rounded flex-shrink-0 w-48 snap-start;
+  }
+
+  /*----Button Components ----*/
+  .btn {
+    @apply px-4 py-2 font-semibold rounded transition duration-150;
+  }
+
+  .btn-primary {
+    @apply bg-purple-600 text-blue-200 hover:bg-purple-700 hover:cursor-pointer px-1 py-0;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-700 text-white hover:bg-gray-600 hover:cursor-pointer;
+  }
+
+  /* ---- Header Components ---- */
+  /* src/style.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🌍 Global defaults */
+@layer base {
+  html, body {
+    @apply bg-black text-pink-400;
+  }
+
+  *, ::before, ::after {
+    border-color: theme('colors.purple.900') !important;
+  }
+}
+
+@layer components {
+  
+  /* Header wrapper */
+  .header {
+    @apply bg-black border-b border-purple-800 text-white sticky top-0 z-50;
+  }
+
+  /* Inner flex container: logo, nav, toggle */
+  .header__inner {
+    @apply max-w-screen-xl mx-auto flex items-center justify-between p-4;
+  }
+
+  /* Logo */
+  .header__logo {
+    @apply text-2xl font-bold;
+  }
+
+  /* Nav items: flex-col on mobile, flex-row on md+ */
+  .header__nav {
+    @apply flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-8 mt-4 md:mt-0;
+  }
+
+  /* Nav links */
+  .header__link {
+    @apply block py-2 px-3 rounded hover:text-purple-400;
+  }
+
+  /* Auth button container (no extra styles needed beyond padding/margin) */
+  .header__auth {
+    @apply md:ml-6;
+  }
+}
+
+  /* LocationSection wrapper */
+  .section-wrapper {
+    @apply py-4 px-3;
+  }
+
+  /* Section base */
+  .section {
+    @apply text-pink-500 mb-6 p-4 rounded bg-gray-900 border border-gray-700;
+  }
+
+  /* Section highlight variant */
+  .section-highlight {
+    @apply border-2 border-pink-500 shadow-lg;
+  }
+
+  
+}
