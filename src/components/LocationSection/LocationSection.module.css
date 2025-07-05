@@ -1,0 +1,10 @@
+/* src/components/LocationSection/LocationSection.module.css */
+@layer components {
+  .sectionWrapper {
+    @apply py-10 px-4;
+  }
+  .imageWrapper {
+    @apply border-2; /* example */
+  }
+}
+
