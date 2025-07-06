@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient.js';
 import { useNavigate } from 'react-router-dom';
+import Button from '../components/Button/Button.jsx';
 import { Link } from "react-router-dom";
 
 const LoginPage = () => {
