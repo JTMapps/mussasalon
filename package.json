@@ -10,12 +10,13 @@
     "preview": "vite preview",
     "postinstall": "flowbite-react patch && flowbite-react register",
     "predeploy": "npm run build",
-    "deploy": "main -d dist"
+    "deploy": "gh-pages -d dist"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
+  "homepage": " https://jtmapps.github.io/mussasalon/",
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
     "clsx": "^2.1.1",
