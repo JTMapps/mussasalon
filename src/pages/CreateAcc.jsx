@@ -115,7 +115,7 @@ const CreateAcc = () => {
               required
             />
           </div>
-          <button className="custom_button" type="submit">
+          <button  className="custom_button" type="submit">
             Create Account
           </button>
         </form>

@@ -14,12 +14,12 @@ function App() {
   return (
     <Routes>
       <Route path="/"              element={<LandingPage   />} />
-      <Route path="/pages/create-account"element={<CreateAcc     />} />
+      <Route path="/create-account"element={<CreateAcc />} />
       <Route path="/login"         element={<LoginPage     />} />
       <Route path="/profile"       element={<Profile       />} />
       <Route path="/services"      element={<ServicesPage  />} />
       <Route path="/clerk"         element={<ClerkPage     />} />
-      <Route path="/pages/forgot-password" element={<ForgotPass  />} />
+      <Route path="/forgot-password" element={<ForgotPass  />} />
       <Route path="/contact-us"    element={<ContactUs    />} />
       <Route path="/about-dev"     element={<DeveloperInfo />} />
     </Routes>
