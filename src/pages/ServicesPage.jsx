@@ -116,6 +116,12 @@ const ServicesPage = () => {
         icon: 'success',
         confirmButtonText: 'OK',
         confirmButtonColor: '#10b981', // Tailwind emerald-500
+        customClass: {
+          popup: 'bg-gray-700 text-white rounded-lg',
+          title: 'text-sm font-semibold',
+          content: 'text-base',
+          confirmButton: 'bg-emerald-500 hover:bg-emerald-600 text-white'
+        },
       }).then(() => {
         navigate('/profile');
       });
