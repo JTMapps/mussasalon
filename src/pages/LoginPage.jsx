@@ -79,11 +79,11 @@ const LoginPage = () => {
         {error && <p className="text-red-500 mt-4">{error}</p>}
         <div>
           <p>is it your first time here?</p>
-        <button onClick={() => navigate("/pages/CreateAcc", { replace: true })}>
+        <button onClick={() => navigate("/pages/create-account", { replace: true })}>
           Create Account
         </button>
         <p>did you forget your password?</p>
-        <button onClick={() => navigate("/pages/ForgotPass", { replace: true })}>
+        <button onClick={() => navigate("/pages/forgot-password", { replace: true })}>
           Forgot Password?
         </button>
       </div>

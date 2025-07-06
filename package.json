@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "postinstall": "flowbite-react patch && flowbite-react register",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "main -d dist"
   },
   "keywords": [],
   "author": "",
