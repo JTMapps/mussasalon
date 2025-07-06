@@ -1,4 +1,6 @@
 // src/pages/ServicesPage.jsx
+import Swal from 'sweetalert2';
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import {
@@ -64,6 +66,7 @@ const ServicesPage = () => {
     });
   };
 
+  const navigate = useNavigate();
   // Always called by modal's confirm button
   const handleAddToCart = async () => {
     if (!selectedService) {
@@ -107,7 +110,16 @@ const ServicesPage = () => {
       }
     }
 
-    setMessage('Service added to cart successfully!');
+    Swal.fire({
+        title: 'Added to Cart!',
+        text: 'Proceed to your Profile to schedule the appointment.',
+        icon: 'success',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#10b981', // Tailwind emerald-500
+      }).then(() => {
+        navigate('/profile');
+      });
+
     // reset & close modal
     setShowAddOnModal(false);
     setSelectedService(null);
