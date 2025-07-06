@@ -55,9 +55,9 @@ export default function LandingPage() {
 
       {/* Updated Location Section */}
       <LocationSection imageSrc={imageSrc} mapEmbedSrc={mapEmbedSrc}>
-        <p>Find us at 123 McCallum Street, Middelburg. 
-          We're open Monday through Saturday, 9am-6pm. 
-          Appointments Only</p>
+        <p>Find us at   1744 Kerk Str, Middelburg. </p>
+        <p>We're open Monday through Saturday, 9am-6pm.</p>
+        <p> Appointments Only</p>
       </LocationSection>
     </>
   );
