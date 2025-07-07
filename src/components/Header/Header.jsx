@@ -1,30 +1,33 @@
-import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { supabase } from '../../supabaseClient.js'
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { supabase } from '../../supabaseClient.js';
 
 export default function Header() {
-  const [user, setUser] = useState(null)
-  const [role, setRole] = useState('')
-  const [isOpen, setIsOpen] = useState(false)
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     async function fetchUser() {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const sessionUser = sessionData?.session?.user
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionUser = sessionData?.session?.user;
+
       if (sessionUser) {
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', sessionUser.id)
-          .single()
-        setUser(sessionUser)
-        setRole(profile?.role || '')
+          .single();
+
+        setUser(sessionUser);
+        setRole(profile?.role || '');
       }
     }
-    fetchUser()
-  }, [])
 
-  const toggleMenu = () => setIsOpen(prev => !prev)
+    fetchUser();
+  }, []);
+
+  const toggleMenu = () => setIsOpen(prev => !prev);
 
   return (
     <nav className="header">
@@ -34,17 +37,27 @@ export default function Header() {
           MusasSalon
         </Link>
 
-        {/* Nav items (hidden on mobile until toggled, always flex on desktop) */}
-        <div
-          className={`${isOpen ? 'block' : 'hidden'} md:flex header__nav`}
-          id="navbar-default"
-        >
+        {/* Nav Items */}
+        <div className={`${isOpen ? 'block' : 'hidden'} md:flex header__nav`} id="navbar-default">
           <Link to="/about-dev" className="header__link">
             Developer Info
           </Link>
-          <Link to="/contact-us" className="header__link">
-            Contact Us
-          </Link>
+
+          {/* Show Messages link for client only */}
+          {user && role === 'user' && (
+            <Link to="/messages" className="header__link">
+              Messages
+            </Link>
+          )}
+
+          {/* Optional: Show inbox for clerk */}
+          {user && role === 'clerk' && (
+            <Link to="/clerk/inbox" className="header__link">
+              Clerk Inbox
+            </Link>
+          )}
+
+          {/* Auth action */}
           <div className="header__auth">
             {user ? (
               <Link
@@ -64,36 +77,21 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile toggle button (visible only on mobile, i.e. hidden at md+) */}
+        {/* Mobile toggle button */}
         <button
           onClick={toggleMenu}
           className="inline-flex items-center p-2 w-10 h-10 justify-center text-gray-400 hover:text-white md:hidden focus:outline-none"
           aria-label="Toggle navigation"
         >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {isOpen ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
             )}
           </svg>
         </button>
       </div>
     </nav>
-  )
+  );
 }

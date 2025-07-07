@@ -220,12 +220,14 @@ const Profile = () => {
 
       {appointmentSuccess && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg text-center">
+          <div className="bg-grey text-white p-6 rounded shadow-lg text-center">
             <p className="mb-4">
               The appointment was successfully reserved and is pending confirmation.
             </p>
+            <p>please be patient while your appointment is being processed.</p>
+            <p>appointments will only be scheduled after at least your deposit payment is acknowledged by us</p>
             <button
-              className="px-4 py-2 bg-blue-500 text-white rounded"
+              className="px-4 py-2 bg-blue-900 text-white rounded"
               onClick={handleConfirmationOk}
             >
               OK
