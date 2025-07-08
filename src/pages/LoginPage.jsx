@@ -1,90 +1,83 @@
-// src/pages/LoginPage.jsx
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient.js';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Button from '../components/Button/Button.jsx';
-import { Link } from "react-router-dom";
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
-  
+    setErrorMsg('');
+
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  
+
     if (error) {
-      setError(error.message);
+      setErrorMsg(error.message);
       return;
     }
-  
-    console.log('Logged in:', data.user);
-  
-    // Fetch user role from the profile table
+
+    const user = data.user;
+
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', data.user.id)
+      .eq('id', user.id)
       .single();
-  
+
     if (profileError) {
-      console.error('Error fetching role:', profileError.message);
-      setError('Failed to retrieve user role.');
+      console.error('[Fetch Role] Error:', profileError.message);
+      setErrorMsg('Failed to retrieve user role.');
       return;
     }
-  
-    // Navigate based on the role
-    if (profileData?.role === 'clerk') {
-      navigate('/clerk', { replace: true });
-    } else {
-      navigate('/profile', { replace: true });
-    }
+
+    const destination = profileData?.role === 'clerk' ? '/clerk' : '/profile';
+    navigate(destination, { replace: true });
   };
-  
 
   return (
     <div className="flex justify-center items-center h-screen">
       <div className="glass-effect p-8 rounded-lg shadow-lg max-w-sm w-full">
         <h2 className="text-3xl font-semibold mb-6 text-center text-white">Log In</h2>
+
         <form onSubmit={handleLogin}>
-          <div className="mb-4">
-            <label className="block text-white mb-2" htmlFor="email">Email</label>
-            <input
-              id="email"
-              className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-white mb-2" htmlFor="password">Password</label>
-            <input
-              id="password"
-              className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button className="custom_button" type="submit">
+          <label htmlFor="email" className="block text-white mb-2">Email</label>
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2 mb-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+
+          <label htmlFor="password" className="block text-white mb-2">Password</label>
+          <input
+            id="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-3 py-2 mb-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+
+          <button type="submit" className="custom_button w-full">
             Log In
           </button>
         </form>
-        {error && <p className="text-red-500 mt-4">{error}</p>}
-        <div>
-          <p>is it your first time here?</p>
-          <Button to="/create-account"  >Create Account</Button>
-        
-         <p>did you forget your password?</p>
-         <Button to="/forgot-password"  >Forgot Password?</Button>
-      </div>
+
+        {errorMsg && <p className="text-red-500 mt-4">{errorMsg}</p>}
+
+        <div className="mt-6 text-white space-y-2 text-center">
+          <p>New here?</p>
+          <Button to="/create-account">Create Account</Button>
+
+          <p>Forgot your password?</p>
+          <Button to="/forgot-password">Reset Password</Button>
+        </div>
       </div>
     </div>
   );

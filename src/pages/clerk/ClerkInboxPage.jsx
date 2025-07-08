@@ -1,36 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../supabaseClient.js'; // Adjust if needed
+import { supabase } from '../../supabaseClient.js';
+import useSessionUser from '../../hooks/useSessionUser';
 
 const ClerkInboxPage = () => {
-  const [clerkId, setClerkId] = useState(null);
-  const [conversations, setConversations] = useState([]);
   const navigate = useNavigate();
+  const { user, role, loading: userLoading } = useSessionUser();
+  const [conversations, setConversations] = useState([]);
 
   useEffect(() => {
-    const loadInbox = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setClerkId(user.id);
+    if (!user || role !== 'clerk') return;
 
-      // Step 1: Get all conversation IDs where clerk is a participant
-      const { data: participantEntries } = await supabase
+    const loadInbox = async () => {
+      // Step 1: Get conversation IDs the clerk participates in
+      const { data: participantEntries, error: partErr } = await supabase
         .from('conversation_participants')
         .select('conversation_id')
         .eq('user_id', user.id);
 
-      const convIds = participantEntries?.map(cp => cp.conversation_id) || [];
+      if (partErr || !participantEntries?.length) return;
 
-      if (convIds.length === 0) return;
+      const convIds = participantEntries.map(cp => cp.conversation_id);
 
-      // Step 2: Get the latest message from each conversation
-      const { data: messages } = await supabase
+      // Step 2: Fetch messages sorted by created_at descending
+      const { data: messages, error: msgErr } = await supabase
         .from('messages')
         .select('*, profiles:sender_id(email)')
         .in('conversation_id', convIds)
         .order('created_at', { ascending: false });
 
-      // Step 3: Group by conversation_id and keep only the latest message
+      if (msgErr || !messages?.length) return;
+
+      // Step 3: Group messages by conversation_id (latest only)
       const latestByConversation = {};
       for (const msg of messages) {
         if (!latestByConversation[msg.conversation_id]) {
@@ -38,8 +39,8 @@ const ClerkInboxPage = () => {
         }
       }
 
-      // Step 4: Get client participant info (excluding clerk)
-      const allParticipantData = await Promise.all(
+      // Step 4: Attach client email for each conversation
+      const detailedConvs = await Promise.all(
         Object.keys(latestByConversation).map(async (convId) => {
           const { data: participants } = await supabase
             .from('conversation_participants')
@@ -55,11 +56,15 @@ const ClerkInboxPage = () => {
         })
       );
 
-      setConversations(allParticipantData);
+      setConversations(detailedConvs);
     };
 
     loadInbox();
-  }, []);
+  }, [user, role]);
+
+  if (userLoading) {
+    return <p className="text-center text-gray-400">Loading your inbox...</p>;
+  }
 
   return (
     <div className="max-w-3xl mx-auto p-6">
@@ -74,7 +79,6 @@ const ClerkInboxPage = () => {
               key={conv.conversation_id}
               className="p-4 cursor-pointer hover:bg-gray-50"
               onClick={() => navigate(`/clerk/messages/${conv.conversation_id}`)}
-
             >
               <div className="font-semibold">{conv.client_email}</div>
               <div className="text-sm text-gray-500 truncate">

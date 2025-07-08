@@ -1,47 +1,56 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../../supabaseClient.js'; // fix path if needed
+import { supabase } from '../../supabaseClient.js';
+import useSessionUser from '../../hooks/useSessionUser';
 
 const ClerkConversationPage = () => {
   const { conversationId } = useParams();
-  const [clerkId, setClerkId] = useState(null);
+  const { user, role, loading: userLoading } = useSessionUser();
   const [clientEmail, setClientEmail] = useState('');
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Initial load
   useEffect(() => {
-    const loadData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setClerkId(user.id);
+    if (!user || role !== 'clerk') return;
 
-      // Step 1: Get participants and find client email
-      const { data: participants } = await supabase
+    const loadConversation = async () => {
+      // Get client participant's email
+      const { data: participants, error: participantError } = await supabase
         .from('conversation_participants')
         .select('profiles(email), user_id')
         .eq('conversation_id', conversationId);
 
-      const client = participants.find(p => p.user_id !== user.id);
-      setClientEmail(client?.profiles?.email ?? 'Client');
+      if (participantError) {
+        console.error('Participant fetch error:', participantError);
+        return;
+      }
 
-      // Step 2: Load messages
-      const { data: msgs } = await supabase
+      const client = participants.find(p => p.user_id !== user.id);
+      setClientEmail(client?.profiles?.email || 'Client');
+
+      // Load conversation messages
+      const { data: msgs, error: messageError } = await supabase
         .from('messages')
         .select('*, profiles:sender_id(email)')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
+      if (messageError) {
+        console.error('Messages fetch error:', messageError);
+        return;
+      }
+
       setMessages(msgs || []);
       setLoading(false);
     };
 
-    loadData();
-  }, [conversationId]);
+    loadConversation();
+  }, [user, role, conversationId]);
 
-  // Real-time messages
   useEffect(() => {
+    if (!conversationId) return;
+
     const channel = supabase
       .channel(`conversation-${conversationId}`)
       .on(
@@ -62,18 +71,25 @@ const ClerkConversationPage = () => {
   }, [conversationId]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !user?.id) return;
 
-    await supabase.from('messages').insert([
+    const { error } = await supabase.from('messages').insert([
       {
         conversation_id: conversationId,
-        sender_id: clerkId,
+        sender_id: user.id,
         content: newMessage,
       },
     ]);
 
+    if (error) {
+      console.error('Send message error:', error);
+      return;
+    }
+
     setNewMessage('');
   };
+
+  if (userLoading) return <p className="text-center mt-8 text-gray-400">Checking user...</p>;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -89,7 +105,7 @@ const ClerkConversationPage = () => {
             <div
               key={msg.id}
               className={`my-2 p-3 rounded-md w-fit max-w-xs text-sm ${
-                msg.sender_id === clerkId ? 'ml-auto bg-blue-100' : 'mr-auto bg-gray-100'
+                msg.sender_id === user.id ? 'ml-auto bg-blue-100' : 'mr-auto bg-gray-100'
               }`}
             >
               <p>{msg.content}</p>

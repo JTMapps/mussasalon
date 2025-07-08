@@ -1,7 +1,6 @@
-// src/pages/ServicesPage.jsx
-import Swal from 'sweetalert2';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 import { supabase } from '../supabaseClient';
 import {
   Modal,
@@ -20,28 +19,34 @@ const ServicesPage = () => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [message, setMessage] = useState('');
   const [showAddOnModal, setShowAddOnModal] = useState(false);
+  const navigate = useNavigate();
 
-  // Fetch user, services, add-ons
   useEffect(() => {
-    const initData = async () => {
+    const fetchData = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData?.session?.user) {
-        const userId = sessionData.session.user.id;
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles').select('*').eq('id', userId).single();
-        if (!profileError) setUser(profile);
+      const sessionUser = sessionData?.session?.user;
+
+      if (sessionUser) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', sessionUser.id)
+          .single();
+        setUser(profile);
       }
+
       const [svcRes, addOnRes] = await Promise.all([
         supabase.from('services').select('*'),
         supabase.from('add_ons').select('*'),
       ]);
-      if (!svcRes.error) setServices(svcRes.data);
-      if (!addOnRes.error) setAddOns(addOnRes.data);
+
+      if (svcRes.data) setServices(svcRes.data);
+      if (addOnRes.data) setAddOns(addOnRes.data);
     };
-    initData();
+
+    fetchData();
   }, []);
 
-  // Select always opens modal
   const handleServiceSelect = (service) => {
     setSelectedService(service);
     setSelectedAddOns([]);
@@ -50,59 +55,52 @@ const ServicesPage = () => {
     setShowAddOnModal(true);
   };
 
-  // Toggle add-on in modal
   const toggleAddOn = (addOn) => {
-    setSelectedAddOns(prev => {
-      const updated = prev.includes(addOn.id)
-        ? prev.filter(id => id !== addOn.id)
-        : [...prev, addOn.id];
-      // recalc total
-      const addOnTotal = updated.reduce((sum, id) => {
-        const found = addOns.find(a => a.id === id);
-        return sum + (found?.price || 0);
-      }, 0);
-      setTotalPrice((selectedService?.price || 0) + addOnTotal);
-      return updated;
-    });
+    const updated = selectedAddOns.includes(addOn.id)
+      ? selectedAddOns.filter(id => id !== addOn.id)
+      : [...selectedAddOns, addOn.id];
+
+    const addOnTotal = updated.reduce((sum, id) => {
+      const found = addOns.find(a => a.id === id);
+      return sum + (found?.price || 0);
+    }, 0);
+
+    setSelectedAddOns(updated);
+    setTotalPrice((selectedService?.price || 0) + addOnTotal);
   };
 
-  const navigate = useNavigate();
-  // Always called by modal's confirm button
   const handleAddToCart = async () => {
-    if (!selectedService) {
-      setMessage('Please select a service.');
+    if (!selectedService || !user) {
+      setMessage(user ? 'Please select a service.' : 'Please log in first.');
       return;
     }
-    if (!user) {
-      setMessage('Please log in first.');
-      return;
-    }
+
     if (user.role === 'clerk') {
       setMessage('Clerks cannot add services to the cart.');
       return;
     }
 
-    // 1) insert cart_item
     const { data: inserted, error: cartError } = await supabase
       .from('cart_items')
       .insert([{ user_id: user.id, service_id: selectedService.id }])
       .select();
+
     if (cartError || !inserted?.length) {
       console.error(cartError);
       setMessage(`Error adding to cart: ${cartError?.message}`);
       return;
     }
-    const newCartItem = inserted[0];
 
-    // 2) insert any add-ons
     if (selectedAddOns.length > 0) {
       const payload = selectedAddOns.map(id => ({
-        cart_item_id: newCartItem.id,
+        cart_item_id: inserted[0].id,
         add_on_id: id,
       }));
+
       const { error: addOnsError } = await supabase
         .from('cart_item_add_ons')
         .insert(payload);
+
       if (addOnsError && !addOnsError.message.includes('duplicate key')) {
         console.error(addOnsError);
         setMessage('Error adding add-ons to cart.');
@@ -111,22 +109,19 @@ const ServicesPage = () => {
     }
 
     Swal.fire({
-        title: 'Added to Cart!',
-        text: 'Proceed to your Profile to schedule the appointment.',
-        icon: 'success',
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#10b981', // Tailwind emerald-500
-        customClass: {
-          popup: 'bg-gray-700 text-white rounded-lg',
-          title: 'text-sm font-semibold',
-          content: 'text-base',
-          confirmButton: 'bg-emerald-500 hover:bg-emerald-600 text-white'
-        },
-      }).then(() => {
-        navigate('/profile');
-      });
+      title: 'Added to Cart!',
+      text: 'Proceed to your Profile to schedule the appointment.',
+      icon: 'success',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#10b981',
+      customClass: {
+        popup: 'bg-gray-700 text-white rounded-lg',
+        title: 'text-sm font-semibold',
+        content: 'text-base',
+        confirmButton: 'bg-emerald-500 hover:bg-emerald-600 text-white'
+      },
+    }).then(() => navigate('/profile'));
 
-    // reset & close modal
     setShowAddOnModal(false);
     setSelectedService(null);
     setSelectedAddOns([]);
@@ -154,74 +149,45 @@ const ServicesPage = () => {
         ))}
       </ul>
 
-      {message && (
-        <p className="mt-4 text-lg font-semibold">{message}</p>
-      )}
+      {message && <p className="mt-4 text-lg font-semibold text-red-600">{message}</p>}
 
-      {/* Add-On Modal (always used) */}
       <Modal
         show={showAddOnModal}
         size="md"
-        popup={true}
+        popup
         onClose={() => setShowAddOnModal(false)}
       >
         <ModalHeader>
-        <h3 className="text-lg font-semibold text-pink-400">
-          {selectedService
-            ? `Add-On Options for ${selectedService.name}`
-            : 'Add-On Options'}
-            </h3>
+          <h3 className="text-lg font-semibold text-pink-400">
+            {selectedService ? `Add-On Options for ${selectedService.name}` : 'Add-On Options'}
+          </h3>
         </ModalHeader>
         <ModalBody>
           <div className="space-y-4">
-            {/* Base price */}
-            <p className="font-medium">
-              Base Price: R{selectedService?.price ?? '0'}
-            </p>
-
-            {/* Only if this service has options */}
+            <p className="font-medium">Base Price: R{selectedService?.price ?? '0'}</p>
             {selectedService?.has_add_on_options ? (
               <ul>
                 {addOns.map(addOn => (
                   <li key={addOn.id} className="mb-2 flex items-center">
-                    <span className="flex-1">
-                      {addOn.name} — R{addOn.price}
-                    </span>
+                    <span className="flex-1">{addOn.name} — R{addOn.price}</span>
                     <button
                       className="ml-4 px-3 py-2 bg-blue-900 text-white rounded hover:text-blue-100 hover:bg-blue-700"
                       onClick={() => toggleAddOn(addOn)}
                     >
-                      {selectedAddOns.includes(addOn.id)
-                        ? 'Remove'
-                        : 'Add'}
+                      {selectedAddOns.includes(addOn.id) ? 'Remove' : 'Add'}
                     </button>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="italic text-gray-500">
-                No add-on options for this service.
-              </p>
+              <p className="italic text-gray-500">No add-on options for this service.</p>
             )}
-
-            {/* Running total */}
             <p className="mt-4 font-semibold">Total: R{totalPrice}</p>
           </div>
         </ModalBody>
-
         <ModalFooter>
-          <button
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            onClick={handleAddToCart}
-          >
-            Confirm &amp; Add to Cart
-          </button>
-          <button
-            className="px-4 py-2 bg-pink-900 text-white rounded hover:bg-pink-700 ml-2"
-            onClick={() => setShowAddOnModal(false)}
-          >
-            Cancel
-          </button>
+          <Button color="success" onClick={handleAddToCart}>Confirm & Add to Cart</Button>
+          <Button color="failure" onClick={() => setShowAddOnModal(false)}>Cancel</Button>
         </ModalFooter>
       </Modal>
     </div>

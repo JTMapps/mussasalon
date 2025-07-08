@@ -3,8 +3,10 @@ import { supabase } from '../supabaseClient.js';
 import { useNavigate } from 'react-router-dom';
 import AppointmentsOverlay from '../components/AppointmentsOverlay';
 import ListItems from '../components/ListItems/ListItems';
+import useSessionUser from '../hooks/useSessionUser';
 
 const Profile = () => {
+  const { user, role, loading } = useSessionUser();
   const [profile, setProfile] = useState(null);
   const [cartItems, setCartItems] = useState([]);
   const [appointmentHistory, setAppointmentHistory] = useState([]);
@@ -15,22 +17,20 @@ const Profile = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProfileAndCart = async () => {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !sessionData?.session?.user) {
-        navigate('/pages/LoginPage');
-        return;
-      }
-      const userId = sessionData.session.user.id;
+    if (loading) return;
+    if (!user) {
+      navigate('/login');
+      return;
+    }
 
+    const fetchProfileAndCart = async () => {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', user.id)
         .single();
-      if (profileError) {
-        console.error("Error fetching profile:", profileError.message);
-      } else {
+
+      if (!profileError && profileData) {
         setProfile(profileData);
       }
 
@@ -42,11 +42,9 @@ const Profile = () => {
           cart_item_add_ons ( add_on: add_ons ( id, name, price ) ),
           appointment:appointments ( id )
         `)
-        .eq('user_id', userId);
+        .eq('user_id', user.id);
 
-      if (cartError) {
-        console.error("Error fetching cart items:", cartError.message);
-      } else {
+      if (!cartError && cartData) {
         const activeItems = cartData.filter(
           item => !item.appointment || (Array.isArray(item.appointment) && item.appointment.length === 0)
         );
@@ -55,11 +53,12 @@ const Profile = () => {
     };
 
     fetchProfileAndCart();
-  }, [navigate]);
+  }, [user, loading, navigate]);
 
   useEffect(() => {
+    if (!profile) return;
+
     const fetchCompletedAppointments = async () => {
-      if (!profile) return;
       const { data, error } = await supabase
         .from('appointments')
         .select(`
@@ -78,9 +77,7 @@ const Profile = () => {
         .eq('cart_item.user_id', profile.id)
         .order('reserved_date', { ascending: false });
 
-      if (error) {
-        console.error("Error fetching completed appointments:", error.message);
-      } else {
+      if (!error) {
         setAppointmentHistory(data);
       }
     };
@@ -90,22 +87,13 @@ const Profile = () => {
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error signing out:", error.message);
-    } else {
-      navigate('/');
-    }
+    if (!error) navigate('/');
   };
 
   const buildCartItemDetails = (item) => {
     const serviceName = item.service?.name || 'Unknown Service';
-    let addOnNames = '';
-    let addOnsTotal = 0;
-    if (item.cart_item_add_ons && item.cart_item_add_ons.length > 0) {
-      const names = item.cart_item_add_ons.map(rel => rel.add_on?.name).filter(Boolean);
-      addOnNames = names.join(', ');
-      addOnsTotal = item.cart_item_add_ons.reduce((sum, rel) => sum + (rel.add_on?.price || 0), 0);
-    }
+    const addOnNames = item.cart_item_add_ons?.map(rel => rel.add_on?.name).filter(Boolean).join(', ') || '';
+    const addOnsTotal = item.cart_item_add_ons?.reduce((sum, rel) => sum + (rel.add_on?.price || 0), 0) || 0;
     const total = (item.service?.price || 0) + addOnsTotal;
     const remaining_due = total > 100 ? total - 100 : 0;
     const fullDescription = addOnNames ? `${serviceName} (${addOnNames})` : serviceName;
@@ -114,11 +102,7 @@ const Profile = () => {
 
   const handleCancelCartItem = async (cartItemId) => {
     const { error } = await supabase.from('cart_items').delete().eq('id', cartItemId);
-    if (error) {
-      console.error("Error deleting cart item:", error.message);
-    } else {
-      setCartItems(cartItems.filter(item => item.id !== cartItemId));
-    }
+    if (!error) setCartItems(cartItems.filter(item => item.id !== cartItemId));
   };
 
   const handleMakeAppointment = (cartItem) => {
@@ -140,15 +124,11 @@ const Profile = () => {
 
   const buildAppointmentDescription = (app) => {
     const serviceName = app.cart_item?.service?.name || 'Unknown Service';
-    let addOnNames = '';
-    if (app.cart_item?.cart_item_add_ons && app.cart_item.cart_item_add_ons.length > 0) {
-      addOnNames = app.cart_item.cart_item_add_ons
-        .map(rel => rel.add_on?.name)
-        .filter(Boolean)
-        .join(', ');
-    }
+    const addOnNames = app.cart_item?.cart_item_add_ons?.map(rel => rel.add_on?.name).filter(Boolean).join(', ') || '';
     return addOnNames ? `${serviceName} (${addOnNames})` : serviceName;
   };
+
+  if (loading) return <p className="text-center p-6">Loading profile...</p>;
 
   return (
     <div className="flex flex-col items-center p-6">
@@ -173,11 +153,10 @@ const Profile = () => {
             const { fullDescription, total, remaining_due } = buildCartItemDetails(item);
             return (
               <div key={item.id} className="border p-4 mt-4">
-                <p><strong>Username:</strong> {profile?.username}</p>
                 <p><strong>Service:</strong> {fullDescription}</p>
                 <p><strong>Total Price:</strong> R{total}</p>
                 <div className="flex space-x-4 mt-2">
-                  {profile && profile.role !== 'clerk' && (
+                  {role !== 'clerk' && (
                     <button
                       className="px-4 py-2 bg-blue-900 text-white rounded hover:text-blue-100 hover:bg-blue-700"
                       onClick={() => handleMakeAppointment(item)}
@@ -198,7 +177,6 @@ const Profile = () => {
         )}
       </div>
 
-      {/* Appointments History Section */}
       <div className="w-full max-w-md mt-8">
         <h3 className="text-xl font-bold mb-4">Appointments History</h3>
         <ListItems
@@ -224,8 +202,8 @@ const Profile = () => {
             <p className="mb-4">
               The appointment was successfully reserved and is pending confirmation.
             </p>
-            <p>please be patient while your appointment is being processed.</p>
-            <p>appointments will only be scheduled after at least your deposit payment is acknowledged by us</p>
+            <p>Please be patient while your appointment is being processed.</p>
+            <p>Appointments will only be scheduled after your deposit payment is acknowledged.</p>
             <button
               className="px-4 py-2 bg-blue-900 text-white rounded"
               onClick={handleConfirmationOk}
@@ -244,9 +222,7 @@ const Profile = () => {
         />
       )}
 
-      {message && (
-        <p className="mt-4 text-lg font-semibold">{message}</p>
-      )}
+      {message && <p className="mt-4 text-lg font-semibold">{message}</p>}
     </div>
   );
 };
