@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/clerk/messages/:conversationId", "destination": "/index.html" },
+    { "source": "/clerk/inbox", "destination": "/index.html" },
+    { "source": "/clerk", "destination": "/index.html" },
+    { "source": "/profile", "destination": "/index.html" },
+    { "source": "/messages", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
