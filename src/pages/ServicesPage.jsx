@@ -19,6 +19,7 @@ const ServicesPage = () => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [message, setMessage] = useState('');
   const [showAddOnModal, setShowAddOnModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,13 +71,18 @@ const ServicesPage = () => {
   };
 
   const handleAddToCart = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+
     if (!selectedService || !user) {
       setMessage(user ? 'Please select a service.' : 'Please log in first.');
+      setSubmitting(false);
       return;
     }
 
     if (user.role === 'clerk') {
       setMessage('Clerks cannot add services to the cart.');
+      setSubmitting(false);
       return;
     }
 
@@ -88,6 +94,7 @@ const ServicesPage = () => {
     if (cartError || !inserted?.length) {
       console.error(cartError);
       setMessage(`Error adding to cart: ${cartError?.message}`);
+      setSubmitting(false);
       return;
     }
 
@@ -104,6 +111,7 @@ const ServicesPage = () => {
       if (addOnsError && !addOnsError.message.includes('duplicate key')) {
         console.error(addOnsError);
         setMessage('Error adding add-ons to cart.');
+        setSubmitting(false);
         return;
       }
     }
@@ -126,6 +134,7 @@ const ServicesPage = () => {
     setSelectedService(null);
     setSelectedAddOns([]);
     setTotalPrice(0);
+    setSubmitting(false);
   };
 
   return (
@@ -186,8 +195,12 @@ const ServicesPage = () => {
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button color="success" onClick={handleAddToCart}>Confirm & Add to Cart</Button>
-          <Button color="failure" onClick={() => setShowAddOnModal(false)}>Cancel</Button>
+          <Button color="success" onClick={handleAddToCart} disabled={submitting}>
+            {submitting ? 'Adding...' : 'Confirm & Add to Cart'}
+          </Button>
+          <Button color="failure" onClick={() => setShowAddOnModal(false)} disabled={submitting}>
+            Cancel
+          </Button>
         </ModalFooter>
       </Modal>
     </div>
